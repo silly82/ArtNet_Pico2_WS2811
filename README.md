@@ -28,27 +28,47 @@ Built for LED walls — each output carries one ArtNet universe (170 RGB pixels 
 | SN74LVC4245A (LJ245A) | 3.3 V → 5 V level shift for WS2811 data lines |
 | 5 V PSU | Power for LEDs + level shifter VCCB |
 
-### Wiring
+### Pinout — WS2811 Outputs (8 channels)
+
+| RP2350 GPIO | SN74LVC4245A | ArtNet Universe | PIO Block | State Machine | Default use |
+|:-----------:|:------------:|:---------------:|:---------:|:-------------:|-------------|
+| **GP0** | A1 → B1 | 0 | PIO0 | SM0 | Universe 0 |
+| **GP1** | A2 → B2 | 1 | PIO0 | SM1 | Universe 1 |
+| **GP2** | A3 → B3 | 2 | PIO0 | SM2 | Universe 2 |
+| **GP3** | A4 → B4 | 3 | PIO0 | SM3 | Universe 3 |
+| **GP4** | A5 → B5 | 4 | PIO1 | SM0 | Universe 4 |
+| **GP5** | A6 → B6 | 5 | PIO1 | SM1 | Universe 5 |
+| **GP6** | A7 → B7 | 6 | PIO1 | SM2 | Reserve |
+| **GP7** | A8 → B8 | 7 | PIO1 | SM3 | Reserve |
+
+> `WS2811_BASE_PIN` and `WS2811_NUM_OUTPUTS` in `config.h` control which pins and how many are active.  
+> The universe offset is set with `ARTNET_UNIVERSE_START` (default 0).
+
+### Wiring Diagram
 
 ```
 W6300-EVB-Pico2          SN74LVC4245A          WS2811 strips
 ─────────────────        ────────────          ─────────────
-GP0  ──────────── A1 ──► B1 ───────────────► Universe 0
+GP0  ──────────── A1 ──► B1 ───────────────► Universe 0  (170 RGB px)
 GP1  ──────────── A2 ──► B2 ───────────────► Universe 1
 GP2  ──────────── A3 ──► B3 ───────────────► Universe 2
 GP3  ──────────── A4 ──► B4 ───────────────► Universe 3
 GP4  ──────────── A5 ──► B5 ───────────────► Universe 4
 GP5  ──────────── A6 ──► B6 ───────────────► Universe 5
-                  VCCA = 3.3 V (from board)
-                  VCCB = 5 V  (external PSU)
-                  DIR  = HIGH (A→B)
-                  /OE  = GND
+GP6  ──────────── A7 ──► B7 ───────────────► Universe 6  (optional)
+GP7  ──────────── A8 ──► B8 ───────────────► Universe 7  (optional)
 
-W6300 SPI (fixed on board):
+3.3V ───────────── VCCA
+5V (ext PSU) ───── VCCB
+GND ────────────── GND (common with PSU!)
+HIGH ───────────── DIR   (A→B direction)
+GND ────────────── /OE   (always enabled)
+
+W6300 SPI (fixed on board — do not use):
   GP10=SCK  GP11=MOSI  GP12=MISO  GP13=CS  GP20=RST  GP21=INT
 ```
 
-> **Important:** Connect GND of the external 5 V PSU to GND of the board.
+> **Important:** Connect GND of the external 5 V PSU to the board GND. Missing common ground is the most common cause of signal errors.
 
 ---
 
