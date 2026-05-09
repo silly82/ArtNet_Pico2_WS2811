@@ -6,6 +6,20 @@ Built for LED walls — each output carries one ArtNet universe (170 RGB pixels 
 
 ---
 
+## Platform
+
+| | |
+|---|---|
+| **MCU** | RP2350 (Raspberry Pi Pico 2 core) |
+| **Ethernet** | WIZnet W6300 — hardware TCP/IP, IPv4/IPv6, 10/100 Mbps |
+| **SDK** | [Raspberry Pi Pico SDK](https://github.com/raspberrypi/pico-sdk) ≥ 2.0 |
+| **Build** | CMake + ARM GCC (`arm-none-eabi-gcc`) |
+| **Board** | W6300-EVB-Pico2 |
+
+> This project uses the **Pico SDK directly** (not Arduino). Full PIO and DMA access is required for real-time parallel LED output.
+
+---
+
 ## Hardware
 
 | Component | Purpose |
