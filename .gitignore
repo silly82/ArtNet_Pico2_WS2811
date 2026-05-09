@@ -1,0 +1,13 @@
+build/
+.cmake/
+CMakeCache.txt
+CMakeFiles/
+*.uf2
+*.bin
+*.elf
+*.map
+*.dis
+*.hex
+*.pio.h
+lib/ioLibrary_Driver/
+.DS_Store

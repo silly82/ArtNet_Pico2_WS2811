@@ -1,0 +1,59 @@
+;
+; WS2811 / WS2812 800 kHz PIO driver
+;
+; 10 PIO-cycles per bit.  Set clock divider so PIO runs at 8 MHz
+; (= 800 000 bit/s × 10 cycles/bit).
+; At 8 MHz: 1 cycle = 125 ns
+;
+;   0-bit: HIGH 2 cyc (250 ns) + LOW 8 cyc (1 000 ns)  → T0H/T0L ✓
+;   1-bit: HIGH 7 cyc (875 ns) + LOW 3 cyc (375  ns)  → T1H/T1L ✓
+;   Reset: caller holds pin LOW ≥ 50 µs before next call
+;
+; OSR: 24-bit autopull, shift-left.  One 32-bit word per pixel,
+; colour data in bits [31:8], bits [7:0] ignored.
+;
+; One copy of this program runs per state machine / universe.
+;
+
+.program ws2811
+.side_set 1
+
+.define T1 2   ; high time for 0-bit  (2 × 125 ns = 250 ns)
+.define T2 5   ; extra high for 1-bit (total 7 cyc = 875 ns)
+.define T3 3   ; low time before next bit
+
+.wrap_target
+bitloop:
+    out x, 1       side 0 [T3 - 1]   ; drive LOW, shift 1 bit into X
+    jmp !x do_zero side 1 [T1 - 1]   ; drive HIGH; jump if bit = 0
+do_one:
+    jmp bitloop    side 1 [T2 - 1]   ; stay HIGH → long pulse (1-bit)
+do_zero:
+    nop            side 0 [T2 - 1]   ; drive LOW → short pulse (0-bit)
+.wrap
+
+% c-sdk {
+#include "hardware/clocks.h"
+
+static inline void ws2811_program_init(PIO pio, uint sm, uint offset, uint pin)
+{
+    pio_gpio_init(pio, pin);
+    pio_sm_set_consecutive_pindirs(pio, sm, pin, 1, true);
+
+    pio_sm_config c = ws2811_program_get_default_config(offset);
+    sm_config_set_sideset_pins(&c, pin);
+
+    // 24-bit autopull, MSB first
+    sm_config_set_out_shift(&c, false, true, 24);
+
+    // Merge TX FIFOs for deeper buffer
+    sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_TX);
+
+    // PIO clock: 8 MHz  (10 cycles × 800 kHz)
+    float div = (float)clock_get_hz(clk_sys) / (800000.0f * 10.0f);
+    sm_config_set_clkdiv(&c, div);
+
+    pio_sm_init(pio, sm, offset, &c);
+    pio_sm_set_enabled(pio, sm, true);
+}
+%}
