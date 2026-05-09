@@ -19,8 +19,9 @@ set(WIZNET_DIR ${CMAKE_SOURCE_DIR}/lib/ioLibrary_Driver)
 add_library(ioLibrary STATIC
     ${WIZNET_DIR}/Ethernet/wizchip_conf.c
     ${WIZNET_DIR}/Ethernet/socket.c
-    # W6300-specific register file — adjust path if your checkout differs:
+    # W6300 register driver + QSPI PIO driver:
     ${WIZNET_DIR}/Ethernet/W6300/w6300.c
+    ${WIZNET_DIR}/Ethernet/W6300/w6300_qspi.c   # PIO-based QSPI — adjust if path differs
 )
 target_include_directories(ioLibrary PUBLIC
     ${WIZNET_DIR}
@@ -28,7 +29,8 @@ target_include_directories(ioLibrary PUBLIC
     ${WIZNET_DIR}/Ethernet/W6300
     ${WIZNET_DIR}/Internet/DHCP
 )
-target_link_libraries(ioLibrary pico_stdlib hardware_spi)
+# QSPI is implemented via PIO — no hardware_spi needed
+target_link_libraries(ioLibrary pico_stdlib hardware_pio hardware_gpio)
 
 # ── PIO compilation ───────────────────────────────────────────────────────────
 # pioasm generates src/ws2811.pio.h automatically via pico_generate_pio_header

@@ -2,44 +2,22 @@
 #include "config.h"
 
 #include "pico/stdlib.h"
-#include "hardware/spi.h"
 #include "hardware/gpio.h"
 
-// WIZnet ioLibrary headers (cloned into lib/ioLibrary_Driver)
+// WIZnet ioLibrary headers
 #include "Ethernet/wizchip_conf.h"
 #include "Ethernet/socket.h"
 
-// ── SPI callbacks required by the WIZnet ioLibrary ───────────────────────────
-
-static void _cs_select(void)   { gpio_put(W6300_PIN_CS, 0); }
-static void _cs_deselect(void) { gpio_put(W6300_PIN_CS, 1); }
-
-static uint8_t _spi_read(void)
-{
-    uint8_t byte;
-    spi_read_blocking(W6300_SPI_PORT, 0xFF, &byte, 1);
-    return byte;
-}
-
-static void _spi_write(uint8_t byte)
-{
-    spi_write_blocking(W6300_SPI_PORT, &byte, 1);
-}
-
-static void _spi_read_burst(uint8_t *buf, uint16_t len)
-{
-    spi_read_blocking(W6300_SPI_PORT, 0xFF, buf, len);
-}
-
-static void _spi_write_burst(uint8_t *buf, uint16_t len)
-{
-    spi_write_blocking(W6300_SPI_PORT, buf, len);
-}
+// The W6300-EVB-Pico2 uses QSPI (Quad-SPI) via RP2350 PIO.
+// The WIZnet library provides the QSPI PIO driver; include its header here:
+#include "W6300/w6300_qspi.h"   // adjust path if your checkout differs
 
 // ── Hardware reset ────────────────────────────────────────────────────────────
 
 static void _chip_reset(void)
 {
+    gpio_init(W6300_PIN_RST);
+    gpio_set_dir(W6300_PIN_RST, GPIO_OUT);
     gpio_put(W6300_PIN_RST, 0);
     sleep_ms(10);
     gpio_put(W6300_PIN_RST, 1);
@@ -50,29 +28,28 @@ static void _chip_reset(void)
 
 void wiznet_init(void)
 {
-    // SPI bus
-    spi_init(W6300_SPI_PORT, W6300_SPI_BAUD);
-    gpio_set_function(W6300_PIN_SCK,  GPIO_FUNC_SPI);
-    gpio_set_function(W6300_PIN_MOSI, GPIO_FUNC_SPI);
-    gpio_set_function(W6300_PIN_MISO, GPIO_FUNC_SPI);
-
-    // CS and RST as plain GPIO
-    gpio_init(W6300_PIN_CS);  gpio_set_dir(W6300_PIN_CS,  GPIO_OUT);
-    gpio_init(W6300_PIN_RST); gpio_set_dir(W6300_PIN_RST, GPIO_OUT);
-    gpio_put(W6300_PIN_CS, 1);
+    // Initialise the WIZnet QSPI PIO driver.
+    // This sets up the PIO state machine on the pins defined in config.h
+    // and registers the low-level read/write callbacks into wizchip_conf.
+    //
+    // The exact function name depends on the WIZnet library version:
+    //   • ioLibrary_Driver W6300 branch: wizchip_qspi_initialize()
+    //   • W6300-EVB-Pico2 example repo:  w6300_qspi_initialize()
+    // Check lib/ioLibrary_Driver/Ethernet/W6300/ for the correct name.
+    wizchip_qspi_initialize(
+        W6300_PIN_SCK,
+        W6300_PIN_CS,
+        W6300_PIN_IO0,  // IO0–IO3 must be consecutive GPIOs
+        W6300_PIN_RST
+    );
 
     _chip_reset();
 
-    // Register callbacks into the WIZnet ioLibrary
-    reg_wizchip_cs_cbfunc(_cs_select, _cs_deselect);
-    reg_wizchip_spi_cbfunc(_spi_read, _spi_write);
-    reg_wizchip_spiburst_cbfunc(_spi_read_burst, _spi_write_burst);
-
-    // RX/TX buffer sizes: 2 KB per socket × 8 sockets (W6300 default)
+    // RX/TX buffer sizes: 2 KB per socket × 8 sockets
     uint8_t rx_size[8] = { 2, 2, 2, 2, 2, 2, 2, 2 };
     uint8_t tx_size[8] = { 2, 2, 2, 2, 2, 2, 2, 2 };
     if (wizchip_init(tx_size, rx_size) != 0) {
-        // Init failed — blink built-in LED as error indicator
+        // Init failed — blink LED as error indicator
         gpio_init(PICO_DEFAULT_LED_PIN);
         gpio_set_dir(PICO_DEFAULT_LED_PIN, GPIO_OUT);
         while (true) {
@@ -81,7 +58,7 @@ void wiznet_init(void)
         }
     }
 
-    // Static IP configuration
+    // Static IP
     wiz_NetInfo net = {
         .mac  = NET_MAC,
         .ip   = NET_IP,

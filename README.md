@@ -64,8 +64,8 @@ GND ────────────── GND (common with PSU!)
 HIGH ───────────── DIR   (A→B direction)
 GND ────────────── /OE   (always enabled)
 
-W6300 SPI (fixed on board — do not use):
-  GP10=SCK  GP11=MOSI  GP12=MISO  GP13=CS  GP20=RST  GP21=INT
+W6300 QSPI via PIO (fixed on board — do not use):
+  GP15=INT  GP16=CS  GP17=SCK  GP18=IO0  GP19=IO1  GP20=IO2  GP21=IO3  GP22=RST
 ```
 
 > **Important:** Connect GND of the external 5 V PSU to the board GND. Missing common ground is the most common cause of signal errors.

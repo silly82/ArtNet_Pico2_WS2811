@@ -1,15 +1,17 @@
 #pragma once
 #include <stdint.h>
 
-// ── W6300 SPI (fixed on W6300-EVB-Pico2) ────────────────────────────────────
-#define W6300_SPI_PORT  spi1
-#define W6300_SPI_BAUD  33000000u   // 33 MHz — safe for W6300 (max 60 MHz)
-#define W6300_PIN_SCK   10
-#define W6300_PIN_MOSI  11
-#define W6300_PIN_MISO  12
-#define W6300_PIN_CS    13
-#define W6300_PIN_RST   20
-#define W6300_PIN_INT   21
+// ── W6300 QSPI (fixed on W6300-EVB-Pico2) ───────────────────────────────────
+// The W6300 uses Quad-SPI (4-bit) implemented via RP2350 PIO.
+// Hardware SPI is NOT used. Pins are hardwired on the board:
+#define W6300_PIN_INT   15
+#define W6300_PIN_CS    16
+#define W6300_PIN_SCK   17
+#define W6300_PIN_IO0   18   // MOSI / data lane 0
+#define W6300_PIN_IO1   19   // MISO / data lane 1
+#define W6300_PIN_IO2   20   // data lane 2
+#define W6300_PIN_IO3   21   // data lane 3
+#define W6300_PIN_RST   22
 
 // ── WS2811 outputs (GP0–GP7 → SN74LVC4245A → LEDs) ─────────────────────────
 #define WS2811_BASE_PIN     0       // first output pin; outputs on GP0, GP1, … GP(N-1)
