@@ -1,9 +1,9 @@
 #pragma once
 #include <stdint.h>
 
-// ── W6300 QSPI (fixed on W6300-EVB-Pico2) ───────────────────────────────────
-// The W6300 uses Quad-SPI (4-bit) implemented via RP2350 PIO.
-// Hardware SPI is NOT used. Pins are hardwired on the board:
+// ── WIZnet chip pins (selected by CMake based on PICO_BOARD) ─────────────────
+#if defined(WIZNET_W6300)
+// W6300-EVB-Pico2: Quad-SPI via RP2350 PIO — pins hardwired on board
 #define W6300_PIN_INT   15
 #define W6300_PIN_CS    16
 #define W6300_PIN_SCK   17
@@ -12,6 +12,19 @@
 #define W6300_PIN_IO2   20   // data lane 2
 #define W6300_PIN_IO3   21   // data lane 3
 #define W6300_PIN_RST   22
+
+#elif defined(WIZNET_W5500)
+// W5500-EVB-Pico: hardware SPI0 — pins hardwired on board
+#define W5500_PIN_MISO  16   // SPI0 RX
+#define W5500_PIN_CS    17   // chip select (manual GPIO)
+#define W5500_PIN_SCK   18   // SPI0 SCK
+#define W5500_PIN_MOSI  19   // SPI0 TX
+#define W5500_PIN_RST   20
+#define W5500_PIN_INT   21
+
+#else
+#  error "No WIZnet chip selected. Pass -DPICO_BOARD=pico2 (W6300) or -DPICO_BOARD=pico (W5500) to cmake."
+#endif
 
 // ── WS2811 outputs (GP0–GP7 → SN74LVC4245A → LEDs) ─────────────────────────
 #define WS2811_BASE_PIN     0       // first output pin; outputs on GP0, GP1, … GP(N-1)

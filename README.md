@@ -1,20 +1,19 @@
 # ArtNet → WS2811 Bridge
 
-Firmware for the **WIZnet W6300-EVB-Pico2** that receives ArtNet DMX over Ethernet and drives up to **8 parallel WS2811 LED universes** in real time.
+Firmware that receives ArtNet DMX over Ethernet and drives up to **8 parallel WS2811 LED universes** in real time.
+
+Supports two WIZnet boards — selected at build time via `-DPICO_BOARD`:
+
+| `PICO_BOARD` | Board | MCU | Ethernet |
+|---|---|---|---|
+| `pico2` | W6300-EVB-Pico2 | RP2350 | W6300 — QSPI, IPv4/IPv6 |
+| `pico` | W5500-EVB-Pico | RP2040 | W5500 — SPI, IPv4 |
 
 Built for LED walls — each output carries one ArtNet universe (170 RGB pixels / 512 DMX channels) at up to 40 fps.
 
 ---
 
 ## Platform
-
-| | |
-|---|---|
-| **MCU** | RP2350 (Raspberry Pi Pico 2 core) |
-| **Ethernet** | WIZnet W6300 — hardware TCP/IP, IPv4/IPv6, 10/100 Mbps |
-| **SDK** | [Raspberry Pi Pico SDK](https://github.com/raspberrypi/pico-sdk) ≥ 2.0 |
-| **Build** | CMake + ARM GCC (`arm-none-eabi-gcc`) |
-| **Board** | W6300-EVB-Pico2 |
 
 > This project uses the **Pico SDK directly** (not Arduino). Full PIO and DMA access is required for real-time parallel LED output.
 
@@ -111,16 +110,27 @@ Edit `src/config.h` before building:
 ### Steps
 
 ```bash
-# 1. Clone WIZnet ioLibrary (W6300 branch)
+# 1. Clone WIZnet ioLibrary — check out the branch matching your board
 git clone https://github.com/WIZnet-ioLibrary/ioLibrary_Driver lib/ioLibrary_Driver
+
+# W6300-EVB-Pico2:
 cd lib/ioLibrary_Driver && git checkout W6300 && cd ../..
+
+# W5500-EVB-Pico (master is default, no checkout needed):
+# cd lib/ioLibrary_Driver && git checkout master && cd ../..
 
 # 2. Copy pico_sdk_import.cmake
 cp $PICO_SDK_PATH/external/pico_sdk_import.cmake .
 
-# 3. Configure & build
+# 3. Configure & build — set PICO_BOARD to match your hardware
 mkdir build && cd build
+
+# W6300-EVB-Pico2:
 cmake .. -DPICO_BOARD=pico2
+
+# W5500-EVB-Pico:
+# cmake .. -DPICO_BOARD=pico
+
 make -j4
 ```
 

@@ -2,7 +2,7 @@
 #include "hardware/gpio.h"
 
 #include "config.h"
-#include "w6300_hal.h"
+#include "wiznet_hal.h"
 #include "ws2811.h"
 #include "artnet.h"
 
