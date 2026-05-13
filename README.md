@@ -11,10 +11,6 @@ Supports two WIZnet boards — selected at build time via `-DPICO_BOARD`:
 
 Built for LED walls — each output carries one ArtNet universe (170 RGB pixels / 512 DMX channels) at up to 40 fps.
 
----
-
-## Platform
-
 > This project uses the **Pico SDK directly** (not Arduino). Full PIO and DMA access is required for real-time parallel LED output.
 
 ---
@@ -23,14 +19,16 @@ Built for LED walls — each output carries one ArtNet universe (170 RGB pixels 
 
 | Component | Purpose |
 |---|---|
-| [W6300-EVB-Pico2](https://docs.wiznet.io/Product/Chip/Ethernet/W6300/w6300-evb-pico2) | RP2350 MCU + WIZnet W6300 hardware TCP/IP |
+| W6300-EVB-Pico2 **or** W5500-EVB-Pico | MCU + WIZnet hardware TCP/IP |
 | SN74LVC4245A (LJ245A) | 3.3 V → 5 V level shift for WS2811 data lines |
 | 5 V PSU | Power for LEDs + level shifter VCCB |
 
 ### Pinout — WS2811 Outputs (8 channels)
 
-| RP2350 GPIO | SN74LVC4245A | ArtNet Universe | PIO Block | State Machine | Default use |
-|:-----------:|:------------:|:---------------:|:---------:|:-------------:|-------------|
+Same GPIO assignment on both boards:
+
+| GPIO | SN74LVC4245A | ArtNet Universe | PIO Block | State Machine | Default use |
+|:----:|:------------:|:---------------:|:---------:|:-------------:|-------------|
 | **GP0** | A1 → B1 | 0 | PIO0 | SM0 | Universe 0 |
 | **GP1** | A2 → B2 | 1 | PIO0 | SM1 | Universe 1 |
 | **GP2** | A3 → B3 | 2 | PIO0 | SM2 | Universe 2 |
@@ -46,8 +44,8 @@ Built for LED walls — each output carries one ArtNet universe (170 RGB pixels 
 ### Wiring Diagram
 
 ```
-W6300-EVB-Pico2          SN74LVC4245A          WS2811 strips
-─────────────────        ────────────          ─────────────
+EVB-Pico / EVB-Pico2     SN74LVC4245A          WS2811 strips
+────────────────────      ────────────          ─────────────
 GP0  ──────────── A1 ──► B1 ───────────────► Universe 0  (170 RGB px)
 GP1  ──────────── A2 ──► B2 ───────────────► Universe 1
 GP2  ──────────── A3 ──► B3 ───────────────► Universe 2
@@ -63,8 +61,9 @@ GND ────────────── GND (common with PSU!)
 HIGH ───────────── DIR   (A→B direction)
 GND ────────────── /OE   (always enabled)
 
-W6300 QSPI via PIO (fixed on board — do not use):
-  GP15=INT  GP16=CS  GP17=SCK  GP18=IO0  GP19=IO1  GP20=IO2  GP21=IO3  GP22=RST
+Reserved — Ethernet chip (do not use):
+  W6300-EVB-Pico2:  GP15=INT  GP16=CS  GP17=SCK  GP18=IO0  GP19=IO1  GP20=IO2  GP21=IO3  GP22=RST
+  W5500-EVB-Pico:   GP16=MISO  GP17=CS  GP18=SCK  GP19=MOSI  GP20=RST  GP21=INT
 ```
 
 > **Important:** Connect GND of the external 5 V PSU to the board GND. Missing common ground is the most common cause of signal errors.
@@ -73,12 +72,12 @@ W6300 QSPI via PIO (fixed on board — do not use):
 
 ## Features
 
-- **Hardware ArtNet reception** via W6300 (hardware TCP/IP, no lwIP overhead)
-- **Parallel WS2811 output** using RP2350 PIO — all universes sent simultaneously
+- **Hardware ArtNet reception** via WIZnet chip (hardware TCP/IP, no lwIP overhead)
+- **Parallel WS2811 output** using PIO — all universes sent simultaneously
 - **DMA-driven** — zero CPU load during LED output
 - **Double-buffered** — new ArtNet data can arrive while the previous frame is being sent
 - **40 fps** frame rate (configurable)
-- Up to **8 independent universes** (limited by RP2350 PIO state machines)
+- Up to **8 independent universes** (limited by PIO state machines)
 
 ---
 
@@ -103,7 +102,7 @@ Edit `src/config.h` before building:
 
 ### Requirements
 
-- [Raspberry Pi Pico SDK](https://github.com/raspberrypi/pico-sdk) (RP2350 branch or ≥ 2.0)
+- [Raspberry Pi Pico SDK](https://github.com/raspberrypi/pico-sdk) ≥ 1.5 (W5500) or ≥ 2.0 (W6300)
 - CMake ≥ 3.20
 - ARM GCC toolchain (`arm-none-eabi-gcc`)
 
@@ -116,7 +115,7 @@ git clone https://github.com/WIZnet-ioLibrary/ioLibrary_Driver lib/ioLibrary_Dri
 # W6300-EVB-Pico2:
 cd lib/ioLibrary_Driver && git checkout W6300 && cd ../..
 
-# W5500-EVB-Pico (master is default, no checkout needed):
+# W5500-EVB-Pico (master is the default):
 # cd lib/ioLibrary_Driver && git checkout master && cd ../..
 
 # 2. Copy pico_sdk_import.cmake
@@ -155,20 +154,20 @@ Compatible with **MadMapper**, **QLC+**, **Resolume**, **sACN-to-ArtNet bridges*
 ## Architecture
 
 ```
-Ethernet → W6300 (HW TCP/IP) → UDP socket
-                                    │
-                              ArtNet parser
-                                    │
-                         universe buffer (double-buffered)
-                                    │
-                          DMA → PIO state machine
-                                    │
-                         SN74LVC4245A (3.3V→5V)
-                                    │
-                            WS2811 LED strip
+Ethernet → WIZnet chip (HW TCP/IP) → UDP socket
+                                          │
+                                    ArtNet parser
+                                          │
+                               universe buffer (double-buffered)
+                                          │
+                                DMA → PIO state machine
+                                          │
+                               SN74LVC4245A (3.3V→5V)
+                                          │
+                                  WS2811 LED strip
 ```
 
-The RP2350 has 8 PIO state machines across 2 PIO blocks. Each state machine drives one universe independently. DMA transfers run in the background — the CPU only handles Ethernet polling and ArtNet parsing.
+Both MCUs (RP2040 and RP2350) have 8 PIO state machines across 2 PIO blocks. Each state machine drives one universe independently. DMA transfers run in the background — the CPU only handles Ethernet polling and ArtNet parsing.
 
 ---
 
